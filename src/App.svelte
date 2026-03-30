@@ -7,6 +7,8 @@
   import { TrailGraphics } from './rendering/TrailGraphics';
   import { EllipseGraphics } from './rendering/EllipseGraphics';
   import { LiDARGraphics } from './rendering/LiDARGraphics';
+  import FormulaPanel from './components/FormulaPanel.svelte';
+  import 'katex/dist/katex.min.css';
 
   let canvasContainer: HTMLElement;
   let renderer: PixiRenderer;
@@ -158,6 +160,11 @@
         <span class="toggle-role">correction</span>
       </label>
     </div>
+  </div>
+
+  <div>
+    <h2>Formulas</h2>
+    <FormulaPanel {lastStep} />
   </div>
 
   <div>
