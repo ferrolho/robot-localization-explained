@@ -23,6 +23,11 @@ export class LiDAR {
   /** Last computed beam endpoints (for visualization). */
   lastBeams: { angle: number; distance: number }[] = [];
 
+  /**
+   * @param room Room geometry used for ray casting
+   * @param numBeams Number of beams evenly spread over 360°
+   * @param sigmaRange Noise std-dev on each range measurement (metres)
+   */
   constructor(room: Room, numBeams: number = 12, sigmaRange: number = 0.05) {
     this.room = room;
     this.numBeams = numBeams;

@@ -17,6 +17,10 @@ export class IMU {
   private sigmaV: number;
   private sigmaOmega: number;
 
+  /**
+   * @param sigmaV Noise std-dev on linear velocity (m/s)
+   * @param sigmaOmega Noise std-dev on angular velocity (rad/s)
+   */
   constructor(sigmaV: number = 0.1, sigmaOmega: number = 0.08) {
     this.sigmaV = sigmaV;
     this.sigmaOmega = sigmaOmega;

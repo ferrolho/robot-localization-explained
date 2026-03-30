@@ -11,6 +11,11 @@ export class PathPlanner {
   private readonly speed: number;
   private readonly waypointMargin: number;
 
+  /**
+   * @param room Room geometry for generating waypoints within bounds
+   * @param speed Forward speed command sent to the robot (m/s)
+   * @param waypointMargin How close the robot must get before picking a new waypoint (metres)
+   */
   constructor(
     private room: Room,
     speed: number = 0.5,
