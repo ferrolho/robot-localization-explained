@@ -61,6 +61,14 @@ export class PixiRenderer {
     };
   }
 
+  /** Convert screen pixels to world coordinates. */
+  screenToWorld(sx: number, sy: number): { x: number; y: number } {
+    return {
+      x: (sx - this._offsetX) / this._scale,
+      y: -(sy - this._offsetY) / this._scale,
+    };
+  }
+
   get scale(): number {
     return this._scale;
   }

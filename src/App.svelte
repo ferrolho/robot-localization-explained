@@ -72,6 +72,17 @@
     renderer.worldContainer.addChild(truthRobot.container);
     renderer.worldContainer.addChild(estRobot.container);
 
+    // Click to set waypoint (only inside the room)
+    renderer.app.canvas.addEventListener('click', (e: MouseEvent) => {
+      const rect = renderer.app.canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const world = renderer.screenToWorld(sx, sy);
+      if (sim.room.isInside(world.x, world.y, 0.2)) {
+        sim.planner.waypoint = { x: world.x, y: world.y };
+      }
+    });
+
     sim.onUpdate = (state: SimState) => {
       truthRobot.update(state.groundTruth);
       estRobot.update(state.estimate);
