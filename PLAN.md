@@ -25,109 +25,127 @@ src/
 │   ├── RobotVacuum.ts                # Ground truth unicycle kinematics
 │   ├── Room.ts                       # Wall geometry, collision, raycast
 │   ├── PathPlanner.ts                # Random waypoints + proportional controller
-│   ├── KalmanFilter.ts               # Predict + correct (EKF-style predict)
+│   ├── KalmanFilter.ts               # 7-state EKF: [px, py, θ, v, ω, b_a, b_g]
 │   ├── sensors/
-│   │   ├── WheelEncoders.ts          # Noisy (v, ω) → control input u
-│   │   ├── IMU.ts                    # Noisy (v, ω) → measurement z
-│   │   └── LiDAR.ts                  # Range to walls → position measurement
-│   └── SimulationLoop.ts             # Fixed-timestep orchestrator
+│   │   ├── WheelEncoders.ts          # Differential drive with mismatch + slip
+│   │   ├── IMU.ts                    # MPU-6050: raw gyro + accel with bias drift
+│   │   └── LiDAR.ts                  # Range beams → position measurement
+│   └── SimulationLoop.ts             # 200 Hz control loop, decoupled from 60 Hz display
 ├── rendering/
 │   ├── PixiRenderer.ts               # App setup, world↔screen transform
 │   ├── RoomGraphics.ts               # Wall lines
 │   ├── RobotGraphics.ts              # Green (truth) + blue (estimate) circles
-│   ├── TrailGraphics.ts              # Solid green + dashed blue trails
+│   ├── TrailGraphics.ts              # Green + blue trails
 │   ├── EllipseGraphics.ts            # Uncertainty ellipse from P
-│   └── LiDARGraphics.ts              # Ray fan when LiDAR enabled
+│   ├── LiDARGraphics.ts              # Point cloud + optional ray fan
+│   ├── WaypointGraphics.ts           # Target waypoint cross marker
+│   └── shapes.ts                     # smoothCircle/smoothEllipse helpers
 ├── components/
-│   ├── SidePanel.svelte              # Container for all panels
-│   ├── SensorToggles.svelte          # Toggle switches for each sensor
-│   ├── SimControls.svelte            # Play/pause, speed, reset
-│   ├── FormulaPanel.svelte           # KaTeX predict/correct equations
-│   └── StateDisplay.svelte           # Real-time x̂, P trace, K
+│   └── FormulaPanel.svelte           # KaTeX equations with hover tooltips
+├── scripts/
+│   └── diagnose.ts                   # Headless KF diagnostic (CSV output)
 └── lib/
-    ├── matrix.ts                     # Hand-rolled 5×5 ops (educational clarity)
-    └── katex-helpers.ts              # KaTeX rendering utilities
+    └── matrix.ts                     # Hand-rolled 7×7 ops (educational clarity)
 ```
 
 ## Core Design
 
 ### State Vector
 
-`x = [px, py, θ, v, ω]ᵀ` — position, heading, linear velocity, angular velocity.
+`x = [px, py, θ, v, ω, b_a, b_g]ᵀ` — position, heading, linear velocity, angular velocity, accelerometer bias, gyroscope bias.
 
-### Simulation Loop (per frame)
+### Simulation Loop (per step at 200 Hz)
 
-1. PathPlanner updates commanded velocity
+1. PathPlanner uses **KF estimate** (closed-loop, as a real robot would)
 2. RobotVacuum.step(dt) — ground truth propagation (unicycle model)
-3. Sensors generate noisy readings from ground truth
-4. KF.predict(u, dt) — wheel encoder readings as control input
-5. KF.correct(z, H, R) — for each enabled measurement sensor
-6. Renderer updates visuals
+3. Wheel encoders generate noisy readings → KF predict (every step)
+4. IMU generates readings with bias drift → KF correct (at 100 Hz)
+5. LiDAR generates range beams → KF correct (at 8–15 Hz depending on model)
+6. Renderer updates visuals (at ~60 Hz via requestAnimationFrame)
 
 ### Sensor Roles
 
-| Sensor | KF Role | Provides | H matrix |
-|--------|---------|----------|----------|
-| Wheel encoders | **Prediction** (control input u) | Noisy v, ω | N/A — feeds Bu |
-| IMU | **Correction** (measurement) | Noisy v, ω | `[[0,0,0,1,0],[0,0,0,0,1]]` |
-| LiDAR | **Correction** (measurement) | Noisy px, py | `[[1,0,0,0,0],[0,1,0,0,0]]` |
+| Sensor | KF Role | Provides | H matrix | Rate |
+|--------|---------|----------|----------|------|
+| Wheel encoders | **Prediction** (control input u) | Noisy v, ω with mismatch + slip | N/A — feeds Bu | 200 Hz |
+| IMU (MPU-6050) | **Correction** (measurement) | v + b_a, ω + b_g | `[[0,0,0,1,0,1,0],[0,0,0,0,1,0,1]]` | 100 Hz |
+| LiDAR (selectable) | **Correction** (measurement) | px, py from ranges | `[[1,0,0,0,0,0,0],[0,1,0,0,0,0,0]]` | 8–15 Hz |
+
+### LiDAR Presets
+
+| Model | Beams | Range noise | Rate | Price |
+|-------|-------|-------------|------|-------|
+| RPLiDAR A1 | 360 | 0.03 m | 8 Hz | ~$100 |
+| RPLiDAR A2 | 400 | 0.02 m | 10 Hz | ~$300 |
+| Hokuyo URG-04LX | 683 | 0.01 m | 10 Hz | ~$1k |
+| SICK TIM561 | 810 | 0.01 m | 15 Hz | ~$2k |
 
 ### Key Educational Moments
 
-- **Encoders only:** Uncertainty ellipse grows unboundedly — odometry drift
-- **Add IMU:** Velocity improves, but position still drifts (IMU doesn't observe position)
-- **Add LiDAR:** Dramatic correction — ellipse shrinks, estimate converges to truth
-- **Formula panel** highlights predict vs correct step in real time
-- **Ellipse** visibly grows during predict, shrinks during correct
+- **Encoders only:** Drift from diameter mismatch curves the path; slip adds noise
+- **Add IMU:** Gyro bias causes spiral drift when alone; combined with encoders, bias is estimated and compensated
+- **Add LiDAR:** Absolute position bounds all drift — ellipse shrinks, estimate converges
+- **Bias estimation:** Watch b_gyro and b_accel values converge as the filter learns sensor errors
+- **Formula panel** highlights predict vs correct step, with hover tooltips on each term
+- **Closed-loop planner:** Poor estimation visibly degrades navigation — the robot makes bad decisions when the filter is bad
 
-### Design Decisions
+---
 
-- **Hand-rolled matrix library** (~50 lines) instead of a dependency — the code IS the teaching material
-- **LiDAR simplified** as position extraction (triangulate px, py from ranges → linear H). Full EKF with raycast Jacobian is a stretch goal
-- **EKF-style predict** from the start because the unicycle model is nonlinear (sin/cos). The linear vs nonlinear distinction is only in the measurement step
-- **Numerical stability:** Force P symmetry after each update; use Joseph form for covariance update
+## Phase 6: Realistic Signal Processing
 
-## Layout
+Two simulation shortcuts ("cheats") remain. This phase replaces them with proper signal processing.
 
-```
-┌──────────────────────────────────────────────────────┐
-│  Kalman Filter: Robot Vacuum                         │
-├─────────────────────────┬────────────────────────────┤
-│                         │  Sensors: ☑Enc ☐IMU ☐LiDAR │
-│   PixiJS Canvas         │  Controls: [▶][⏸][↻] 1x    │
-│   (top-down 2D room)    │                            │
-│                         │  ── Predict ──────────     │
-│   ● green = truth       │  x̂⁻ = Ax̂ + Bu             │
-│   ● blue  = estimate    │  P⁻ = APAᵀ + Q            │
-│   ◯ ellipse = P         │                            │
-│                         │  ── Correct ──────────     │
-│                         │  K = P⁻Hᵀ(HP⁻Hᵀ+R)⁻¹     │
-│                         │  x̂ = x̂⁻ + K(z − Hx̂⁻)     │
-│                         │  P = (I−KH)P⁻             │
-│                         │                            │
-│                         │  State: px=1.2 py=0.8 ...  │
-│                         │  ‖P‖ = 0.34               │
-└─────────────────────────┴────────────────────────────┘
-```
+### 6a. LiDAR: Triangulate Position from Beam Ranges
 
-## Deployment
+**Current cheat:** `read()` returns `truth.px + noise` — ignores the actual beams.
 
-```typescript
-// vite.config.ts
-export default defineConfig({
-  plugins: [svelte()],
-  base: '/kalman-filter-project/',
-  build: { outDir: 'dist' },
-});
-```
+**Realistic approach:** Use opposite beam pairs to compute position from wall distances in a known rectangular room.
 
-Deploy: `npm run build && npx gh-pages -d dist`
+For a rectangular room centred at origin (half-width `hw`, half-height `hh`):
+- A beam hitting the right wall at distance `d` at angle `α` gives: `px = hw - d·cos(α)`
+- A beam hitting the top wall gives: `py = hh - d·sin(α)`
+- Each beam pair (opposite walls) gives an independent position estimate
+- Average all estimates, weighted by confidence (beams nearly parallel to a wall are unreliable)
 
-## Verification
+**Implementation plan:**
+1. In `LiDAR.read()`, cast all beams and collect `(angle, noisyRange)` pairs (already done)
+2. For each beam, determine which wall it hits using `Room.raycast()` direction
+3. Compute the implied robot position from each beam + known wall location
+4. Weight each estimate by `|cos(angle_to_wall_normal)|` — beams perpendicular to walls are most reliable
+5. Weighted average gives `(px_est, py_est)` — this is the measurement `z`
+6. The noise on `z` emerges naturally from range noise propagated through the geometry
+7. R matrix: compute from the weighted combination of per-beam range variances
 
-1. `npm run dev` — robot moves around room
-2. Toggle sensors — observe uncertainty ellipse behaviour
-3. Encoders only → drift. Add IMU → velocity correction. Add LiDAR → position snaps
-4. Formula panel updates in sync with simulation
-5. `npm run build && npm run preview` — verify production build
-6. Deploy to GitHub Pages and verify
+**What changes:**
+- `LiDAR.read()` — replace the 3-line cheat with ~30 lines of triangulation
+- `LiDAR.updateDerivedParams()` — R is now derived from the geometry, not a simple formula
+- Noise characteristics will depend on robot position (near walls = some beams more accurate) — more realistic
+
+### 6b. Accelerometer: Integrate Acceleration Instead of Reading Velocity
+
+**Current cheat:** `read()` returns `truth.v + bias + noise` — a real accelerometer measures acceleration, not velocity.
+
+**Realistic approach:** The IMU stores a velocity accumulator. Each `read()` call:
+1. Sample true acceleration: `a_true = (truth.v - v_prev) / dt`
+2. Add bias and noise: `a_meas = a_true + b_a + noise_a`
+3. Integrate: `v_accumulated += a_meas * dt`
+4. Return `v_accumulated` as the velocity measurement
+
+This naturally produces:
+- Velocity drift from integrated bias (realistic)
+- Growing uncertainty over time without corrections (realistic)
+- Noise that accumulates differently than additive per-sample noise (realistic)
+
+**What changes:**
+- `IMU` class — add `prevTruthV`, `accumulatedV` fields
+- `IMU.read()` — compute acceleration, add noise/bias, integrate to velocity
+- `IMU.reset()` — reset accumulator
+- The H matrix and R stay the same (still observing velocity + bias)
+- R might need retuning since the noise characteristics change
+
+**Impact:** With integrated acceleration, the accelerometer measurement will drift faster when uncorrected, making the benefit of sensor fusion even more visible. The gyro part stays unchanged (it already directly measures angular rate).
+
+### 6c. Remaining Polish
+
+- [ ] Deploy to GitHub Pages
+- [ ] Responsive layout polish

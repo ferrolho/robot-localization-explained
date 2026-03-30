@@ -48,11 +48,42 @@
 - [x] `LiDARGraphics.ts` — ray fan visualization
 - [x] Toggle LiDAR on → ellipse shrink + estimate convergence
 - [x] Legend (green = truth, blue = estimate, ellipse = uncertainty)
-- [ ] Responsive layout polish
-- [ ] Deploy to GitHub Pages
-- [ ] *Stretch:* Formula hover → highlights corresponding visuals
-- [ ] *Stretch:* Noise sliders for Q and R parameters
-- [ ] *Stretch:* Full EKF with raycast Jacobian for LiDAR
-- [ ] *Stretch:* Code panel showing TypeScript implementation
 
-**Remaining:** Deploy + polish
+---
+
+## Phase 5: Realistic Sensor Models + UX ✅
+
+- [x] Decouple control loop (200 Hz) from display rate (~60 Hz)
+- [x] Per-sensor update rates (IMU 100 Hz, LiDAR 8–15 Hz)
+- [x] Realistic wheel encoder model — differential drive with diameter mismatch (2%) and wheel slip (3%)
+- [x] Realistic IMU model (MPU-6050) — raw gyro + accelerometer with drifting biases
+- [x] 7-state KF: `[px, py, θ, v, ω, b_a, b_g]` with bias estimation
+- [x] Real LiDAR presets (RPLiDAR A1, A2, Hokuyo, SICK) with specs and prices
+- [x] LiDAR point cloud visualization with optional ray toggle
+- [x] Tuned Q matrix — reduced Q_pos to prevent LiDAR correction jitter
+- [x] Covariance clamping to prevent divergence when enabling sensors mid-run
+- [x] Planner uses KF estimate (closed-loop, as a real robot would)
+- [x] Click-to-set-waypoint with screen-to-world coordinate conversion
+- [x] Waypoint marker visualization
+- [x] Formula panel hover tooltips explaining each KF term
+- [x] Smooth rendering — `smoothCircle`/`smoothEllipse` helpers for PixiJS world-space shapes
+- [x] Formula panel highlights both predict + correct when both are active
+- [x] Encoder sub-options (diameter mismatch, slip) as toggleable checkboxes
+- [x] Sensor options nest under parent toggles (conditional visibility)
+- [x] Headless diagnostic script (`scripts/diagnose.ts`) for KF tuning
+- [x] JSDoc with units on all sensor/planner constructor params
+
+---
+
+## Phase 6: Realistic Signal Processing 🔲
+
+- [ ] LiDAR: triangulate position from beam ranges against known room geometry (replace noise-on-truth cheat)
+- [ ] Accelerometer: integrate acceleration to derive velocity (replace direct velocity read cheat)
+- [ ] Deploy to GitHub Pages
+- [ ] Responsive layout polish
+
+---
+
+## Stretch Goals 🔲
+
+- [ ] Matrix visualization panel — show how state vector and covariance are transformed through predict → correct, with animated transitions from prior to posterior
