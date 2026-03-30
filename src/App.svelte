@@ -26,7 +26,7 @@
   let time = $state(0);
   let traceP = $state(0);
   let activeSteps = $state({ predicted: true, corrected: false });
-  let estimate = $state({ px: 0, py: 0, theta: 0, v: 0, omega: 0 });
+  let estimate = $state({ px: 0, py: 0, theta: 0, v: 0, omega: 0, bGyro: 0, bAccel: 0 });
   let sensorsEnabled = $state({ encoders: true, imu: false, lidar: false });
 
   const lidarPresets = [
@@ -175,32 +175,46 @@
         <span>Wheel Encoders</span>
         <span class="toggle-role">prediction</span>
       </label>
+      {#if sensorsEnabled.encoders}
+        <div class="sub-toggles">
+          <label class="toggle sub">
+            <input type="checkbox" checked={true} onchange={(e: Event) => { sim.encoders.diameterMismatchEnabled = (e.target as HTMLInputElement).checked; }} />
+            <span>Diameter mismatch (2%)</span>
+          </label>
+          <label class="toggle sub">
+            <input type="checkbox" checked={true} onchange={(e: Event) => { sim.encoders.slipEnabled = (e.target as HTMLInputElement).checked; }} />
+            <span>Wheel slip (3%)</span>
+          </label>
+        </div>
+      {/if}
+
       <label class="toggle">
         <input type="checkbox" checked={sensorsEnabled.imu} onchange={() => toggleSensor('imu')} />
-        <span>IMU</span>
+        <span>IMU (MPU-6050)</span>
         <span class="toggle-role">correction</span>
       </label>
+
       <label class="toggle">
         <input type="checkbox" checked={sensorsEnabled.lidar} onchange={() => toggleSensor('lidar')} />
         <span>2D LiDAR</span>
         <span class="toggle-role">correction</span>
       </label>
-    </div>
-
-    <div class="lidar-presets">
-      <h3>LiDAR Model</h3>
-      {#each lidarPresets as preset, i}
-        <label class="preset-row">
-          <input type="radio" name="lidar-preset" checked={selectedLidar === i} onchange={() => selectLidar(i)} />
-          <span class="preset-name">{preset.name}</span>
-          <span class="preset-specs">{preset.beams} beams · {preset.noise}m · {preset.rate} Hz</span>
-          <span class="preset-price">{preset.price}</span>
-        </label>
-      {/each}
-      <label class="toggle" style="margin-top: 6px;">
-        <input type="checkbox" checked={false} onchange={(e: Event) => { lidarGfx.showRays = (e.target as HTMLInputElement).checked; }} />
-        <span>Show laser rays</span>
-      </label>
+      {#if sensorsEnabled.lidar}
+        <div class="sub-toggles">
+          {#each lidarPresets as preset, i}
+            <label class="preset-row">
+              <input type="radio" name="lidar-preset" checked={selectedLidar === i} onchange={() => selectLidar(i)} />
+              <span class="preset-name">{preset.name}</span>
+              <span class="preset-price">{preset.price}</span>
+            </label>
+            <div class="preset-specs">{preset.beams} beams · {preset.noise}m noise · {preset.rate} Hz</div>
+          {/each}
+          <label class="toggle sub" style="margin-top: 4px;">
+            <input type="checkbox" checked={false} onchange={(e: Event) => { lidarGfx.showRays = (e.target as HTMLInputElement).checked; }} />
+            <span>Show laser rays</span>
+          </label>
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -217,6 +231,8 @@
       <div>&theta; = {(estimate.theta * 180 / Math.PI).toFixed(1)}&deg;</div>
       <div>v = {estimate.v.toFixed(2)} m/s</div>
       <div>&omega; = {estimate.omega.toFixed(2)} rad/s</div>
+      <div>b<sub>gyro</sub> = {estimate.bGyro.toFixed(4)} rad/s</div>
+      <div>b<sub>accel</sub> = {estimate.bAccel.toFixed(4)} m/s</div>
     </div>
   </div>
 
@@ -275,6 +291,23 @@
     height: 16px;
   }
 
+  .sub-toggles {
+    margin-left: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .toggle.sub {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .toggle.sub input[type="checkbox"] {
+    width: 13px;
+    height: 13px;
+  }
+
   .toggle-role {
     font-size: 11px;
     color: var(--text-muted);
@@ -284,45 +317,35 @@
     margin-left: auto;
   }
 
-  .lidar-presets {
-    margin-top: 10px;
-  }
-
-  .lidar-presets h3 {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    margin: 0 0 6px;
-  }
-
   .preset-row {
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 12px;
-    padding: 4px 0;
+    padding: 2px 0 0;
     cursor: pointer;
   }
 
   .preset-row input[type="radio"] {
     accent-color: var(--accent);
+    width: 13px;
+    height: 13px;
   }
 
   .preset-name {
     font-weight: 500;
-    min-width: 110px;
   }
 
   .preset-specs {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-muted);
-    flex: 1;
+    margin: 0 0 4px 21px;
   }
 
   .preset-price {
     font-size: 11px;
     color: var(--text-muted);
     font-family: ui-monospace, Consolas, monospace;
+    margin-left: auto;
   }
 </style>
