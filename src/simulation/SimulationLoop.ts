@@ -96,6 +96,7 @@ export class SimulationLoop {
     this.robot.reset(0, 0, 0);
     this.planner.reset();
     this.kf.reset();
+    this.imu.reset();
     this.emitState();
   }
 
