@@ -7,6 +7,7 @@
   import { TrailGraphics } from './rendering/TrailGraphics';
   import { EllipseGraphics } from './rendering/EllipseGraphics';
   import { LiDARGraphics } from './rendering/LiDARGraphics';
+  import { WaypointGraphics } from './rendering/WaypointGraphics';
   import FormulaPanel from './components/FormulaPanel.svelte';
   import 'katex/dist/katex.min.css';
 
@@ -19,6 +20,7 @@
   let estTrail: TrailGraphics;
   let ellipse: EllipseGraphics;
   let lidarGfx: LiDARGraphics;
+  let waypointGfx: WaypointGraphics;
 
   let running = $state(false);
   let time = $state(0);
@@ -36,6 +38,10 @@
     // Room
     const roomGfx = new RoomGraphics(sim.room);
     renderer.worldContainer.addChild(roomGfx.container);
+
+    // Waypoint marker
+    waypointGfx = new WaypointGraphics();
+    renderer.worldContainer.addChild(waypointGfx.container);
 
     // LiDAR rays (under trails)
     lidarGfx = new LiDARGraphics();
@@ -60,6 +66,7 @@
     sim.onUpdate = (state: SimState) => {
       truthRobot.update(state.groundTruth);
       estRobot.update(state.estimate);
+      waypointGfx.update(state.waypoint.x, state.waypoint.y);
 
       const cov = state.covariance;
       ellipse.update(
