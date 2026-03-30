@@ -37,7 +37,17 @@ export class SimulationLoop {
   private _animFrameId: number | null = null;
   private _onUpdate: ((state: SimState) => void) | null = null;
 
-  private readonly dt = 1 / 60;
+  /** Control loop rate (Hz) */
+  static readonly CONTROL_HZ = 200;
+  /** IMU rate (Hz) */
+  static readonly IMU_HZ = 100;
+  /** LiDAR rate (Hz) — tunable at runtime */
+  lidarHz = 8;
+  /** Display rate — tied to requestAnimationFrame (~60 Hz) */
+  static readonly DISPLAY_HZ = 60;
+
+  private readonly dt = 1 / SimulationLoop.CONTROL_HZ;
+  private _stepCount = 0;
 
   constructor(roomConfig: RoomConfig = { width: 6, height: 4 }) {
     this.room = new Room(roomConfig);
@@ -82,6 +92,7 @@ export class SimulationLoop {
   reset(): void {
     this.pause();
     this._time = 0;
+    this._stepCount = 0;
     this.robot.reset(0, 0, 0);
     this.planner.reset();
     this.kf.reset();
@@ -91,7 +102,10 @@ export class SimulationLoop {
   private tick = (): void => {
     if (!this._running) return;
 
-    const stepsPerFrame = Math.round(this._speed);
+    // Run enough control steps to fill one display frame
+    const stepsPerFrame = Math.round(
+      (SimulationLoop.CONTROL_HZ / SimulationLoop.DISPLAY_HZ) * this._speed,
+    );
     for (let i = 0; i < stepsPerFrame; i++) {
       this.stepOnce();
     }
@@ -115,16 +129,20 @@ export class SimulationLoop {
     // 3. KF predict (always runs — uses encoder readings as control input)
     this.kf.predict(enc.v, enc.omega, this.dt);
 
-    // 4. KF correct (for each enabled measurement sensor)
-    if (this.sensors.imu) {
+    // 4. KF correct (for each enabled measurement sensor, at its own rate)
+    const imuEvery = Math.round(SimulationLoop.CONTROL_HZ / SimulationLoop.IMU_HZ);
+    if (this.sensors.imu && this._stepCount % imuEvery === 0) {
       const z = this.imu.read(this.robot.state);
       this.kf.correct(z, this.imu.H, this.imu.R);
     }
 
-    if (this.sensors.lidar) {
+    const lidarEvery = Math.round(SimulationLoop.CONTROL_HZ / this.lidarHz);
+    if (this.sensors.lidar && this._stepCount % lidarEvery === 0) {
       const z = this.lidar.read(this.robot.state);
       this.kf.correct(z, this.lidar.H, this.lidar.R);
     }
+
+    this._stepCount++;
   }
 
   private emitState(): void {
