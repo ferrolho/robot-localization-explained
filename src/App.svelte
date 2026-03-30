@@ -6,6 +6,7 @@
   import { RobotGraphics } from './rendering/RobotGraphics';
   import { TrailGraphics } from './rendering/TrailGraphics';
   import { EllipseGraphics } from './rendering/EllipseGraphics';
+  import { LiDARGraphics } from './rendering/LiDARGraphics';
 
   let canvasContainer: HTMLElement;
   let renderer: PixiRenderer;
@@ -15,12 +16,14 @@
   let truthTrail: TrailGraphics;
   let estTrail: TrailGraphics;
   let ellipse: EllipseGraphics;
+  let lidarGfx: LiDARGraphics;
 
   let running = $state(false);
   let time = $state(0);
   let traceP = $state(0);
   let lastStep = $state<'predict' | 'correct'>('predict');
   let estimate = $state({ px: 0, py: 0, theta: 0, v: 0, omega: 0 });
+  let sensorsEnabled = $state({ encoders: true, imu: false, lidar: false });
   let frameCount = 0;
 
   onMount(async () => {
@@ -32,7 +35,11 @@
     const roomGfx = new RoomGraphics(sim.room);
     renderer.worldContainer.addChild(roomGfx.container);
 
-    // Trails (under robots)
+    // LiDAR rays (under trails)
+    lidarGfx = new LiDARGraphics();
+    renderer.worldContainer.addChild(lidarGfx.container);
+
+    // Trails
     truthTrail = new TrailGraphics(0x48bb78);
     estTrail = new TrailGraphics(0x63b3ed);
     renderer.worldContainer.addChild(truthTrail.container);
@@ -48,7 +55,6 @@
     renderer.worldContainer.addChild(truthRobot.container);
     renderer.worldContainer.addChild(estRobot.container);
 
-    // Update callback
     sim.onUpdate = (state: SimState) => {
       truthRobot.update(state.groundTruth);
       estRobot.update(state.estimate);
@@ -58,6 +64,12 @@
         state.estimate.px, state.estimate.py,
         cov.p11, cov.p12, cov.p22,
       );
+
+      if (state.lidarBeams.length > 0) {
+        lidarGfx.update(state.groundTruth.px, state.groundTruth.py, state.lidarBeams);
+      } else {
+        lidarGfx.clear();
+      }
 
       running = state.running;
       time = state.time;
@@ -96,8 +108,16 @@
     sim.reset();
     truthTrail?.clear();
     estTrail?.clear();
+    lidarGfx?.clear();
     running = false;
     time = 0;
+  }
+
+  function toggleSensor(sensor: 'encoders' | 'imu' | 'lidar') {
+    sensorsEnabled[sensor] = !sensorsEnabled[sensor];
+    if (sim) {
+      sim.sensors = { ...sensorsEnabled };
+    }
   }
 </script>
 
@@ -121,11 +141,22 @@
 
   <div>
     <h2>Sensors</h2>
-    <div class="legend" style="font-size: 13px; color: var(--text-muted)">
-      <div>Wheel encoders: ON (prediction input)</div>
-      <div style="margin-top: 4px; color: var(--text-muted); font-style: italic">
-        IMU and LiDAR coming soon
-      </div>
+    <div class="sensor-toggles">
+      <label class="toggle">
+        <input type="checkbox" checked={sensorsEnabled.encoders} onchange={() => toggleSensor('encoders')} />
+        <span>Wheel Encoders</span>
+        <span class="toggle-role">prediction</span>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" checked={sensorsEnabled.imu} onchange={() => toggleSensor('imu')} />
+        <span>IMU</span>
+        <span class="toggle-role">correction</span>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" checked={sensorsEnabled.lidar} onchange={() => toggleSensor('lidar')} />
+        <span>2D LiDAR</span>
+        <span class="toggle-role">correction</span>
+      </label>
     </div>
   </div>
 
@@ -173,5 +204,34 @@
     font-size: 12px;
     color: var(--text-muted);
     line-height: 1.6;
+  }
+
+  .sensor-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .toggle input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+  }
+
+  .toggle-role {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--border);
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: auto;
   }
 </style>

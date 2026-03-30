@@ -3,6 +3,8 @@ import { RobotVacuum } from './RobotVacuum';
 import { PathPlanner } from './PathPlanner';
 import { KalmanFilter } from './KalmanFilter';
 import { WheelEncoders } from './sensors/WheelEncoders';
+import { IMU } from './sensors/IMU';
+import { LiDAR } from './sensors/LiDAR';
 import type { RobotState, RoomConfig, SensorConfig } from './types';
 
 export interface SimState {
@@ -11,6 +13,7 @@ export interface SimState {
   covariance: { p11: number; p12: number; p22: number };
   traceP: number;
   lastStep: 'predict' | 'correct';
+  lidarBeams: { angle: number; distance: number }[];
   time: number;
   running: boolean;
   sensors: SensorConfig;
@@ -22,6 +25,8 @@ export class SimulationLoop {
   readonly planner: PathPlanner;
   readonly kf: KalmanFilter;
   readonly encoders: WheelEncoders;
+  readonly imu: IMU;
+  readonly lidar: LiDAR;
 
   sensors: SensorConfig = { encoders: true, imu: false, lidar: false };
 
@@ -39,6 +44,8 @@ export class SimulationLoop {
     this.planner = new PathPlanner(this.room, 0.5);
     this.kf = new KalmanFilter();
     this.encoders = new WheelEncoders();
+    this.imu = new IMU();
+    this.lidar = new LiDAR(this.room);
   }
 
   set onUpdate(cb: (state: SimState) => void) {
@@ -107,7 +114,15 @@ export class SimulationLoop {
     this.kf.predict(enc.v, enc.omega, this.dt);
 
     // 4. KF correct (for each enabled measurement sensor)
-    // IMU and LiDAR will be added in later phases
+    if (this.sensors.imu) {
+      const z = this.imu.read(this.robot.state);
+      this.kf.correct(z, this.imu.H, this.imu.R);
+    }
+
+    if (this.sensors.lidar) {
+      const z = this.lidar.read(this.robot.state);
+      this.kf.correct(z, this.lidar.H, this.lidar.R);
+    }
   }
 
   private emitState(): void {
@@ -118,6 +133,7 @@ export class SimulationLoop {
         covariance: this.kf.getPositionCovariance(),
         traceP: this.kf.getTraceP(),
         lastStep: this.kf.lastStep,
+        lidarBeams: this.sensors.lidar ? this.lidar.lastBeams : [],
         time: this._time,
         running: this._running,
         sensors: { ...this.sensors },
