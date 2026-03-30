@@ -1,64 +1,58 @@
 # Progress Tracker
 
-## Phase 1: Skeleton + Moving Robot (~2-3h)
+## Phase 1: Skeleton + Moving Robot ✅
 
-- [ ] Init Vite + Svelte + TS project
-- [ ] Install PixiJS 8
-- [ ] `Room.ts` — rectangular wall geometry, collision detection
-- [ ] `RobotVacuum.ts` — unicycle kinematics, ground truth propagation
-- [ ] `PathPlanner.ts` — random waypoints + proportional controller
-- [ ] `PixiRenderer.ts` — PixiJS 8 app setup, world↔screen transform
-- [ ] `RoomGraphics.ts` — draw wall lines
-- [ ] `RobotGraphics.ts` — green circle with heading indicator
-- [ ] `SimulationLoop.ts` — fixed-timestep orchestrator with requestAnimationFrame
-- [ ] Minimal `App.svelte` with canvas container + play/pause
-- [ ] Verify with `npm run dev`
-
-**Deliverable:** Robot vacuum bouncing around a room
+- [x] Init Vite + Svelte + TS project
+- [x] Install PixiJS 8
+- [x] `Room.ts` — rectangular wall geometry, collision detection, raycast
+- [x] `RobotVacuum.ts` — unicycle kinematics, ground truth propagation
+- [x] `PathPlanner.ts` — random waypoints + proportional controller
+- [x] `PixiRenderer.ts` — PixiJS 8 app setup, world↔screen transform
+- [x] `RoomGraphics.ts` — draw wall lines
+- [x] `RobotGraphics.ts` — green circle with heading indicator
+- [x] `SimulationLoop.ts` — fixed-timestep orchestrator with requestAnimationFrame
+- [x] Minimal `App.svelte` with canvas container + play/pause
+- [x] Verify with `npm run dev`
 
 ---
 
-## Phase 2: Kalman Filter + Encoder Drift (~3-4h)
+## Phase 2: Kalman Filter + Encoder Drift ✅
 
-- [ ] `lib/matrix.ts` — matMul, matTranspose, matInverse (≤5×5), matAdd, matSub, matIdentity
-- [ ] `KalmanFilter.ts` — predict() + correct() methods
-- [ ] `WheelEncoders.ts` — noisy v, ω as control input u
-- [ ] `EllipseGraphics.ts` — uncertainty ellipse from P (eigenvalue decomposition of 2×2 submatrix)
-- [ ] `TrailGraphics.ts` — green solid trail (truth) + blue dashed trail (estimate)
-- [ ] Blue estimated robot circle added to scene
-- [ ] Verify: estimate drifts away from truth, ellipse grows
-
-**Deliverable:** Core "aha" — drifting estimate with growing uncertainty
+- [x] `lib/matrix.ts` — matMul, matTranspose, matInverse (≤5×5), matAdd, matSub, matIdentity
+- [x] `KalmanFilter.ts` — predict() + correct() methods (EKF-style predict)
+- [x] `WheelEncoders.ts` — noisy v, ω as control input u
+- [x] `EllipseGraphics.ts` — uncertainty ellipse from P (eigenvalue decomposition of 2×2 submatrix)
+- [x] `TrailGraphics.ts` — green solid trail (truth) + blue trail (estimate)
+- [x] Blue estimated robot circle added to scene
+- [x] Estimate drifts away from truth, ellipse grows
 
 ---
 
-## Phase 3: IMU + Side Panel (~3-4h)
+## Phase 3: IMU + Side Panel ✅
 
-- [ ] `IMU.ts` — noisy velocity measurement, H and R matrices
-- [ ] Wire KF correct step when IMU enabled
-- [ ] Install KaTeX
-- [ ] `FormulaPanel.svelte` — KaTeX-rendered predict/correct equations, active step highlighting
-- [ ] `StateDisplay.svelte` — real-time x̂, P trace, K values
-- [ ] `SensorToggles.svelte` — toggle switches for encoders / IMU
-- [ ] `SimControls.svelte` — play/pause, speed slider, reset
-- [ ] `SidePanel.svelte` — assembles all sub-components
-- [ ] Layout: canvas left, side panel right
-
-**Deliverable:** Full side panel, IMU correction visible
+- [x] `IMU.ts` — noisy velocity measurement, H and R matrices
+- [x] Wire KF correct step when IMU enabled
+- [x] Install KaTeX
+- [x] `FormulaPanel.svelte` — KaTeX-rendered predict/correct equations, active step highlighting
+- [x] State display — real-time x̂, P trace, step type (inline in App.svelte)
+- [x] Sensor toggles — checkbox toggles for encoders / IMU / LiDAR with role labels
+- [x] Sim controls — play/pause, reset (inline in App.svelte)
+- [x] Layout: canvas left, side panel right
 
 ---
 
-## Phase 4: LiDAR + Polish (~3-4h)
+## Phase 4: LiDAR + Polish ✅
 
-- [ ] `Room.raycast()` — distance from point to nearest wall along a direction
-- [ ] `LiDAR.ts` — position extraction from range measurements
-- [ ] `LiDARGraphics.ts` — ray fan visualization
-- [ ] Toggle LiDAR on → dramatic ellipse shrink + estimate convergence
-- [ ] Legend (green = truth, blue = estimate, ellipse = uncertainty)
+- [x] `Room.raycast()` — distance from point to nearest wall along a direction
+- [x] `LiDAR.ts` — position extraction from range measurements
+- [x] `LiDARGraphics.ts` — ray fan visualization
+- [x] Toggle LiDAR on → ellipse shrink + estimate convergence
+- [x] Legend (green = truth, blue = estimate, ellipse = uncertainty)
 - [ ] Responsive layout polish
 - [ ] Deploy to GitHub Pages
 - [ ] *Stretch:* Formula hover → highlights corresponding visuals
 - [ ] *Stretch:* Noise sliders for Q and R parameters
 - [ ] *Stretch:* Full EKF with raycast Jacobian for LiDAR
+- [ ] *Stretch:* Code panel showing TypeScript implementation
 
-**Deliverable:** Complete educational tool on GitHub Pages
+**Remaining:** Deploy + polish
