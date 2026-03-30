@@ -20,8 +20,6 @@ export class KalmanFilter {
   Q: Mat;
   /** Last computed Kalman gain */
   K: Mat | null = null;
-  /** Whether the last step was 'predict' or 'correct' */
-  lastStep: 'predict' | 'correct' = 'predict';
 
   constructor() {
     // Initial state: origin, facing right, stationary
@@ -100,7 +98,6 @@ export class KalmanFilter {
       }
     }
 
-    this.lastStep = 'predict';
     this.K = null;
   }
 
@@ -140,7 +137,6 @@ export class KalmanFilter {
       Math.cos(matGet(this.x, 2, 0)),
     ));
 
-    this.lastStep = 'correct';
   }
 
   /** Get state as a plain object for rendering. */
@@ -180,6 +176,5 @@ export class KalmanFilter {
       0, 0, 0, 0, 0.01,
     ]);
     this.K = null;
-    this.lastStep = 'predict';
   }
 }

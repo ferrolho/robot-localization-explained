@@ -12,7 +12,7 @@ export interface SimState {
   estimate: RobotState;
   covariance: { p11: number; p12: number; p22: number };
   traceP: number;
-  lastStep: 'predict' | 'correct';
+  activeSteps: { predicted: boolean; corrected: boolean };
   lidarBeams: { angle: number; distance: number }[];
   time: number;
   running: boolean;
@@ -132,7 +132,10 @@ export class SimulationLoop {
         estimate: this.kf.getState(),
         covariance: this.kf.getPositionCovariance(),
         traceP: this.kf.getTraceP(),
-        lastStep: this.kf.lastStep,
+        activeSteps: {
+          predicted: this.sensors.encoders,
+          corrected: this.sensors.imu || this.sensors.lidar,
+        },
         lidarBeams: this.sensors.lidar ? this.lidar.lastBeams : [],
         time: this._time,
         running: this._running,

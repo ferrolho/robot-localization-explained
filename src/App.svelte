@@ -23,7 +23,7 @@
   let running = $state(false);
   let time = $state(0);
   let traceP = $state(0);
-  let lastStep = $state<'predict' | 'correct'>('predict');
+  let activeSteps = $state({ predicted: true, corrected: false });
   let estimate = $state({ px: 0, py: 0, theta: 0, v: 0, omega: 0 });
   let sensorsEnabled = $state({ encoders: true, imu: false, lidar: false });
   let frameCount = 0;
@@ -76,7 +76,7 @@
       running = state.running;
       time = state.time;
       traceP = state.traceP;
-      lastStep = state.lastStep;
+      activeSteps = state.activeSteps;
       estimate = state.estimate;
 
       frameCount++;
@@ -164,7 +164,7 @@
 
   <div>
     <h2>Formulas</h2>
-    <FormulaPanel {lastStep} />
+    <FormulaPanel {activeSteps} />
   </div>
 
   <div>
@@ -182,7 +182,7 @@
     <h2>Uncertainty</h2>
     <div class="state-display">
       <div>tr(P) = {traceP.toFixed(4)}</div>
-      <div>step = {lastStep}</div>
+      <div>steps = {activeSteps.predicted ? 'P' : ''}{activeSteps.corrected ? '+C' : ''}</div>
     </div>
   </div>
 

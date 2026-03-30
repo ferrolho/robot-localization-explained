@@ -2,9 +2,9 @@
   import katex from 'katex';
 
   interface Props {
-    lastStep: 'predict' | 'correct';
+    activeSteps: { predicted: boolean; corrected: boolean };
   }
-  let { lastStep }: Props = $props();
+  let { activeSteps }: Props = $props();
 
   function renderKatex(latex: string): string {
     return katex.renderToString(latex, {
@@ -25,7 +25,7 @@
   ];
 </script>
 
-<div class="formula-section" class:active={lastStep === 'predict'}>
+<div class="formula-section" class:active={activeSteps.predicted}>
   <div class="formula-header">Predict</div>
   {#each predictFormulas as f}
     <div class="formula-row">
@@ -35,7 +35,7 @@
   {/each}
 </div>
 
-<div class="formula-section" class:active={lastStep === 'correct'}>
+<div class="formula-section" class:active={activeSteps.corrected}>
   <div class="formula-header">Correct</div>
   {#each correctFormulas as f}
     <div class="formula-row">
