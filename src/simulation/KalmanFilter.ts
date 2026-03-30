@@ -82,6 +82,24 @@ export class KalmanFilter {
       matAdd(matMul(matMul(F, this.P), matTranspose(F)), this.Q)
     );
 
+    // Clamp diagonal entries to prevent unbounded covariance growth.
+    // Without this, enabling a sensor mid-run causes the large
+    // cross-correlations to produce an enormous Kalman gain that
+    // flings the position estimate off-screen.
+    const maxVar = [10, 10, 4, 1, 1]; // px, py, theta, v, omega
+    for (let i = 0; i < 5; i++) {
+      const pii = matGet(this.P, i, 0 + i); // workaround: 0+i for clarity
+      if (pii > maxVar[i]) {
+        const scale = Math.sqrt(maxVar[i] / pii);
+        // Scale row i and column i so the diagonal = maxVar[i]
+        // and cross-correlations shrink proportionally.
+        for (let j = 0; j < 5; j++) {
+          matSet(this.P, i, j, matGet(this.P, i, j) * scale);
+          matSet(this.P, j, i, matGet(this.P, j, i) * scale);
+        }
+      }
+    }
+
     this.lastStep = 'predict';
     this.K = null;
   }
