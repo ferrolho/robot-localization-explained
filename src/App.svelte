@@ -5,15 +5,22 @@
   import { RoomGraphics } from './rendering/RoomGraphics';
   import { RobotGraphics } from './rendering/RobotGraphics';
   import { TrailGraphics } from './rendering/TrailGraphics';
+  import { EllipseGraphics } from './rendering/EllipseGraphics';
 
   let canvasContainer: HTMLElement;
   let renderer: PixiRenderer;
   let sim: SimulationLoop;
   let truthRobot: RobotGraphics;
-  let trail: TrailGraphics;
+  let estRobot: RobotGraphics;
+  let truthTrail: TrailGraphics;
+  let estTrail: TrailGraphics;
+  let ellipse: EllipseGraphics;
 
   let running = $state(false);
   let time = $state(0);
+  let traceP = $state(0);
+  let lastStep = $state<'predict' | 'correct'>('predict');
+  let estimate = $state({ px: 0, py: 0, theta: 0, v: 0, omega: 0 });
   let frameCount = 0;
 
   onMount(async () => {
@@ -25,28 +32,48 @@
     const roomGfx = new RoomGraphics(sim.room);
     renderer.worldContainer.addChild(roomGfx.container);
 
-    // Trail
-    trail = new TrailGraphics(0x48bb78);
-    renderer.worldContainer.addChild(trail.container);
+    // Trails (under robots)
+    truthTrail = new TrailGraphics(0x48bb78);
+    estTrail = new TrailGraphics(0x63b3ed);
+    renderer.worldContainer.addChild(truthTrail.container);
+    renderer.worldContainer.addChild(estTrail.container);
 
-    // Ground truth robot
-    truthRobot = new RobotGraphics(0x48bb78);
+    // Uncertainty ellipse
+    ellipse = new EllipseGraphics();
+    renderer.worldContainer.addChild(ellipse.container);
+
+    // Robots
+    truthRobot = new RobotGraphics(0x48bb78, 0.8);
+    estRobot = new RobotGraphics(0x63b3ed, 0.8);
     renderer.worldContainer.addChild(truthRobot.container);
+    renderer.worldContainer.addChild(estRobot.container);
 
     // Update callback
     sim.onUpdate = (state: SimState) => {
       truthRobot.update(state.groundTruth);
+      estRobot.update(state.estimate);
+
+      const cov = state.covariance;
+      ellipse.update(
+        state.estimate.px, state.estimate.py,
+        cov.p11, cov.p12, cov.p22,
+      );
+
       running = state.running;
       time = state.time;
+      traceP = state.traceP;
+      lastStep = state.lastStep;
+      estimate = state.estimate;
 
       frameCount++;
       if (frameCount % 3 === 0) {
-        trail.addPoint(state.groundTruth.px, state.groundTruth.py);
-        trail.redraw();
+        truthTrail.addPoint(state.groundTruth.px, state.groundTruth.py);
+        estTrail.addPoint(state.estimate.px, state.estimate.py);
+        truthTrail.redraw();
+        estTrail.redraw();
       }
     };
 
-    // Auto-start
     sim.start();
   });
 
@@ -67,7 +94,8 @@
 
   function reset() {
     sim.reset();
-    trail?.clear();
+    truthTrail?.clear();
+    estTrail?.clear();
     running = false;
     time = 0;
   }
@@ -92,6 +120,35 @@
   </div>
 
   <div>
+    <h2>Sensors</h2>
+    <div class="legend" style="font-size: 13px; color: var(--text-muted)">
+      <div>Wheel encoders: ON (prediction input)</div>
+      <div style="margin-top: 4px; color: var(--text-muted); font-style: italic">
+        IMU and LiDAR coming soon
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <h2>State Estimate</h2>
+    <div class="state-display">
+      <div>px = {estimate.px.toFixed(2)} m</div>
+      <div>py = {estimate.py.toFixed(2)} m</div>
+      <div>&theta; = {(estimate.theta * 180 / Math.PI).toFixed(1)}&deg;</div>
+      <div>v = {estimate.v.toFixed(2)} m/s</div>
+      <div>&omega; = {estimate.omega.toFixed(2)} rad/s</div>
+    </div>
+  </div>
+
+  <div>
+    <h2>Uncertainty</h2>
+    <div class="state-display">
+      <div>tr(P) = {traceP.toFixed(4)}</div>
+      <div>step = {lastStep}</div>
+    </div>
+  </div>
+
+  <div>
     <h2>Legend</h2>
     <div class="legend">
       <div class="legend-item">
@@ -100,8 +157,21 @@
       </div>
       <div class="legend-item">
         <div class="legend-dot" style="background: var(--blue)"></div>
-        Estimated (coming soon)
+        KF estimate
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background: transparent; border: 2px solid var(--blue)"></div>
+        Uncertainty (2&sigma;)
       </div>
     </div>
   </div>
 </div>
+
+<style>
+  .state-display {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+</style>

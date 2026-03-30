@@ -1,18 +1,29 @@
 import { Room } from './Room';
 import { RobotVacuum } from './RobotVacuum';
 import { PathPlanner } from './PathPlanner';
-import type { RobotState, RoomConfig } from './types';
+import { KalmanFilter } from './KalmanFilter';
+import { WheelEncoders } from './sensors/WheelEncoders';
+import type { RobotState, RoomConfig, SensorConfig } from './types';
 
 export interface SimState {
   groundTruth: RobotState;
+  estimate: RobotState;
+  covariance: { p11: number; p12: number; p22: number };
+  traceP: number;
+  lastStep: 'predict' | 'correct';
   time: number;
   running: boolean;
+  sensors: SensorConfig;
 }
 
 export class SimulationLoop {
   readonly room: Room;
   readonly robot: RobotVacuum;
   readonly planner: PathPlanner;
+  readonly kf: KalmanFilter;
+  readonly encoders: WheelEncoders;
+
+  sensors: SensorConfig = { encoders: true, imu: false, lidar: false };
 
   private _running = false;
   private _time = 0;
@@ -26,6 +37,8 @@ export class SimulationLoop {
     this.room = new Room(roomConfig);
     this.robot = new RobotVacuum(0, 0, 0);
     this.planner = new PathPlanner(this.room, 0.5);
+    this.kf = new KalmanFilter();
+    this.encoders = new WheelEncoders();
   }
 
   set onUpdate(cb: (state: SimState) => void) {
@@ -63,13 +76,13 @@ export class SimulationLoop {
     this._time = 0;
     this.robot.reset(0, 0, 0);
     this.planner.reset();
+    this.kf.reset();
     this.emitState();
   }
 
   private tick = (): void => {
     if (!this._running) return;
 
-    // Run multiple physics steps for speed multiplier
     const stepsPerFrame = Math.round(this._speed);
     for (let i = 0; i < stepsPerFrame; i++) {
       this.stepOnce();
@@ -80,17 +93,34 @@ export class SimulationLoop {
   };
 
   private stepOnce(): void {
+    // 1. Ground truth propagation
     const { vCmd, omegaCmd } = this.planner.getCommand(this.robot.state);
     this.robot.step(this.dt, vCmd, omegaCmd, this.room);
     this._time += this.dt;
+
+    // 2. Sensor readings
+    const enc = this.sensors.encoders
+      ? this.encoders.read(this.robot.state)
+      : { v: this.kf.getState().v, omega: this.kf.getState().omega };
+
+    // 3. KF predict (always runs — uses encoder readings as control input)
+    this.kf.predict(enc.v, enc.omega, this.dt);
+
+    // 4. KF correct (for each enabled measurement sensor)
+    // IMU and LiDAR will be added in later phases
   }
 
   private emitState(): void {
     if (this._onUpdate) {
       this._onUpdate({
         groundTruth: { ...this.robot.state },
+        estimate: this.kf.getState(),
+        covariance: this.kf.getPositionCovariance(),
+        traceP: this.kf.getTraceP(),
+        lastStep: this.kf.lastStep,
         time: this._time,
         running: this._running,
+        sensors: { ...this.sensors },
       });
     }
   }
