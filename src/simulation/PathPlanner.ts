@@ -7,7 +7,7 @@ import type { Room } from './Room';
  * controller to steer the robot toward each one.
  */
 export class PathPlanner {
-  private waypoint: { x: number; y: number };
+  waypoint: { x: number; y: number };
   private readonly speed: number;
   private readonly waypointMargin: number;
 

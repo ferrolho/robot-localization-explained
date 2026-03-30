@@ -13,6 +13,7 @@ export interface SimState {
   covariance: { p11: number; p12: number; p22: number };
   traceP: number;
   activeSteps: { predicted: boolean; corrected: boolean };
+  waypoint: { x: number; y: number };
   lidarBeams: { angle: number; distance: number }[];
   time: number;
   running: boolean;
@@ -100,8 +101,9 @@ export class SimulationLoop {
   };
 
   private stepOnce(): void {
-    // 1. Ground truth propagation
-    const { vCmd, omegaCmd } = this.planner.getCommand(this.robot.state);
+    // 1. Planner uses the KF estimate (as a real robot would)
+    const est = this.kf.getState();
+    const { vCmd, omegaCmd } = this.planner.getCommand(est);
     this.robot.step(this.dt, vCmd, omegaCmd, this.room);
     this._time += this.dt;
 
@@ -136,6 +138,7 @@ export class SimulationLoop {
           predicted: true,
           corrected: this.sensors.imu || this.sensors.lidar,
         },
+        waypoint: { ...this.planner.waypoint },
         lidarBeams: this.sensors.lidar ? this.lidar.lastBeams : [],
         time: this._time,
         running: this._running,
