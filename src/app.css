@@ -26,7 +26,7 @@ body {
 
 #app {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 300px 1fr 280px;
   height: 100vh;
 }
 
@@ -36,6 +36,16 @@ body {
 }
 
 .side-panel {
+  background: var(--panel-bg);
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.info-panel {
   background: var(--panel-bg);
   border-left: 1px solid var(--border);
   padding: 16px;
@@ -52,7 +62,8 @@ body {
   color: var(--text);
 }
 
-.side-panel h2 {
+.side-panel h2,
+.info-panel h2 {
   font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;

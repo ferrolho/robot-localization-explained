@@ -9,6 +9,8 @@
   import { LiDARGraphics } from './rendering/LiDARGraphics';
   import { WaypointGraphics } from './rendering/WaypointGraphics';
   import FormulaPanel from './components/FormulaPanel.svelte';
+  import JourneyStepper from './components/JourneyStepper.svelte';
+  import { STAGES } from './lib/stages';
   import 'katex/dist/katex.min.css';
 
   let canvasContainer: HTMLElement;
@@ -28,6 +30,8 @@
   let activeSteps = $state({ predicted: true, corrected: false });
   let estimate = $state({ px: 0, py: 0, theta: 0, v: 0, omega: 0, bGyro: 0, bAccel: 0 });
   let sensorsEnabled = $state({ encoders: true, imu: false, lidar: false });
+  let activeStage = $state(1);
+  let currentStage = $derived(STAGES[activeStage - 1]);
 
   const lidarPresets = [
     { name: 'RPLiDAR A1',     beams: 360, noise: 0.03, rate: 8,  price: '~$100' },
@@ -142,7 +146,22 @@
     time = 0;
   }
 
+  function setStage(stageId: number) {
+    activeStage = stageId;
+    const stage = STAGES[stageId - 1];
+    sensorsEnabled = { ...stage.defaultSensors };
+    if (sim) {
+      sim.sensors = { ...sensorsEnabled };
+    }
+    reset();
+    if (!stage.comingSoon) {
+      sim?.start();
+      running = true;
+    }
+  }
+
   function toggleSensor(sensor: 'encoders' | 'imu' | 'lidar') {
+    if (!currentStage.allowedSensors[sensor]) return;
     sensorsEnabled[sensor] = !sensorsEnabled[sensor];
     if (sim) {
       sim.sensors = { ...sensorsEnabled };
@@ -160,11 +179,16 @@
   }
 </script>
 
-<div class="canvas-container" bind:this={canvasContainer}></div>
-
 <div class="side-panel">
   <h1>Kalman Filter: Robot Vacuum</h1>
 
+  <JourneyStepper {activeStage} onStageChange={setStage} />
+
+  {#if currentStage.comingSoon}
+    <div class="coming-soon-overlay">
+      Coming Soon
+    </div>
+  {:else}
   <div>
     <h2>Controls</h2>
     <div class="controls">
@@ -199,14 +223,14 @@
         </div>
       {/if}
 
-      <label class="toggle">
-        <input type="checkbox" checked={sensorsEnabled.imu} onchange={() => toggleSensor('imu')} />
+      <label class="toggle" class:disabled={!currentStage.allowedSensors.imu}>
+        <input type="checkbox" checked={sensorsEnabled.imu} disabled={!currentStage.allowedSensors.imu} onchange={() => toggleSensor('imu')} />
         <span>IMU (MPU-6050)</span>
         <span class="toggle-role">correction</span>
       </label>
 
-      <label class="toggle">
-        <input type="checkbox" checked={sensorsEnabled.lidar} onchange={() => toggleSensor('lidar')} />
+      <label class="toggle" class:disabled={!currentStage.allowedSensors.lidar}>
+        <input type="checkbox" checked={sensorsEnabled.lidar} disabled={!currentStage.allowedSensors.lidar} onchange={() => toggleSensor('lidar')} />
         <span>2D LiDAR</span>
         <span class="toggle-role">correction</span>
       </label>
@@ -229,9 +253,28 @@
     </div>
   </div>
 
+  {/if}
+</div>
+
+<div class="canvas-container" bind:this={canvasContainer}></div>
+
+<div class="info-panel">
   <div>
-    <h2>Formulas</h2>
-    <FormulaPanel {activeSteps} />
+    <h2>Legend</h2>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background: var(--green)"></div>
+        Ground truth
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background: var(--blue)"></div>
+        KF estimate
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background: transparent; border: 2px solid var(--blue)"></div>
+        Uncertainty (2&sigma;)
+      </div>
+    </div>
   </div>
 
   <div>
@@ -256,21 +299,8 @@
   </div>
 
   <div>
-    <h2>Legend</h2>
-    <div class="legend">
-      <div class="legend-item">
-        <div class="legend-dot" style="background: var(--green)"></div>
-        Ground truth
-      </div>
-      <div class="legend-item">
-        <div class="legend-dot" style="background: var(--blue)"></div>
-        KF estimate
-      </div>
-      <div class="legend-item">
-        <div class="legend-dot" style="background: transparent; border: 2px solid var(--blue)"></div>
-        Uncertainty (2&sigma;)
-      </div>
-    </div>
+    <h2>Formulas</h2>
+    <FormulaPanel {activeSteps} />
   </div>
 </div>
 
@@ -317,6 +347,24 @@
   .toggle.sub input[type="checkbox"] {
     width: 13px;
     height: 13px;
+  }
+
+  .toggle.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  .coming-soon-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: var(--text-muted);
+    font-size: 16px;
+    font-style: italic;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    margin-top: 8px;
   }
 
   .toggle-role {
