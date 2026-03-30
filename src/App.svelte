@@ -28,6 +28,15 @@
   let activeSteps = $state({ predicted: true, corrected: false });
   let estimate = $state({ px: 0, py: 0, theta: 0, v: 0, omega: 0 });
   let sensorsEnabled = $state({ encoders: true, imu: false, lidar: false });
+
+  const lidarPresets = [
+    { name: 'RPLiDAR A1',     beams: 360, noise: 0.03, rate: 8,  price: '~$100' },
+    { name: 'RPLiDAR A2',     beams: 400, noise: 0.02, rate: 10, price: '~$300' },
+    { name: 'Hokuyo URG-04LX', beams: 683, noise: 0.01, rate: 10, price: '~$1k' },
+    { name: 'SICK TIM561',    beams: 810, noise: 0.01, rate: 15, price: '~$2k' },
+  ] as const;
+  let selectedLidar = $state(0);
+
   let frameCount = 0;
 
   onMount(async () => {
@@ -128,6 +137,16 @@
       sim.sensors = { ...sensorsEnabled };
     }
   }
+
+  function selectLidar(index: number) {
+    selectedLidar = index;
+    if (!sim) return;
+    const preset = lidarPresets[index];
+    sim.lidar.numBeams = preset.beams;
+    sim.lidar.sigmaRange = preset.noise;
+    sim.lidar.updateDerivedParams();
+    sim.lidarHz = preset.rate;
+  }
 </script>
 
 <div class="canvas-container" bind:this={canvasContainer}></div>
@@ -165,6 +184,22 @@
         <input type="checkbox" checked={sensorsEnabled.lidar} onchange={() => toggleSensor('lidar')} />
         <span>2D LiDAR</span>
         <span class="toggle-role">correction</span>
+      </label>
+    </div>
+
+    <div class="lidar-presets">
+      <h3>LiDAR Model</h3>
+      {#each lidarPresets as preset, i}
+        <label class="preset-row">
+          <input type="radio" name="lidar-preset" checked={selectedLidar === i} onchange={() => selectLidar(i)} />
+          <span class="preset-name">{preset.name}</span>
+          <span class="preset-specs">{preset.beams} beams · {preset.noise}m · {preset.rate} Hz</span>
+          <span class="preset-price">{preset.price}</span>
+        </label>
+      {/each}
+      <label class="toggle" style="margin-top: 6px;">
+        <input type="checkbox" checked={false} onchange={(e: Event) => { lidarGfx.showRays = (e.target as HTMLInputElement).checked; }} />
+        <span>Show laser rays</span>
       </label>
     </div>
   </div>
@@ -247,5 +282,47 @@
     padding: 1px 6px;
     border-radius: 3px;
     margin-left: auto;
+  }
+
+  .lidar-presets {
+    margin-top: 10px;
+  }
+
+  .lidar-presets h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 0 0 6px;
+  }
+
+  .preset-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+
+  .preset-row input[type="radio"] {
+    accent-color: var(--accent);
+  }
+
+  .preset-name {
+    font-weight: 500;
+    min-width: 110px;
+  }
+
+  .preset-specs {
+    font-size: 11px;
+    color: var(--text-muted);
+    flex: 1;
+  }
+
+  .preset-price {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: ui-monospace, Consolas, monospace;
   }
 </style>

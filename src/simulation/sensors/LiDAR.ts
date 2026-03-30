@@ -13,11 +13,11 @@ import type { Room } from '../Room';
  */
 export class LiDAR {
   readonly H: Mat;
-  readonly R: Mat;
+  R: Mat;
 
-  readonly numBeams: number;
-  private sigmaRange: number;
-  private sigmaPosition: number;
+  numBeams: number;
+  sigmaRange: number;
+  sigmaPosition: number;
   private room: Room;
 
   /** Last computed beam endpoints (for visualization). */
@@ -28,25 +28,27 @@ export class LiDAR {
    * @param numBeams Number of beams evenly spread over 360°
    * @param sigmaRange Noise std-dev on each range measurement (metres)
    */
-  constructor(room: Room, numBeams: number = 12, sigmaRange: number = 0.05) {
+  constructor(room: Room, numBeams: number = 360, sigmaRange: number = 0.03) {
     this.room = room;
     this.numBeams = numBeams;
     this.sigmaRange = sigmaRange;
-
-    // Position uncertainty after triangulation is larger than individual range noise
-    this.sigmaPosition = sigmaRange * 2;
+    this.sigmaPosition = 0;
+    this.R = mat(2, 2, [0, 0, 0, 0]);
+    this.updateDerivedParams();
 
     // Observation matrix: picks out px and py from state
     this.H = mat(2, 5, [
       1, 0, 0, 0, 0,
       0, 1, 0, 0, 0,
     ]);
+  }
 
-    // Measurement noise covariance
-    this.R = mat(2, 2, [
-      this.sigmaPosition * this.sigmaPosition, 0,
-      0, this.sigmaPosition * this.sigmaPosition,
-    ]);
+  /** Recompute sigmaPosition and R from current numBeams/sigmaRange. */
+  updateDerivedParams(): void {
+    // Triangulating position from N beams reduces noise by ~sqrt(N/2)
+    this.sigmaPosition = (this.sigmaRange * 2) / Math.sqrt(this.numBeams / 2);
+    const v = this.sigmaPosition * this.sigmaPosition;
+    this.R = mat(2, 2, [v, 0, 0, v]);
   }
 
   /** Get noisy position measurement from LiDAR ranges. Returns 2×1 vector. */
