@@ -36,10 +36,12 @@ export class KalmanFilter {
 
     // Process noise: how much we distrust the model each step.
     // Position grows slowly, velocity is less predictable.
+    // Process noise: position grows slowly (driven mainly by velocity
+    // uncertainty through the Jacobian), velocity is less predictable.
     this.Q = mat(5, 5, [
-      0.001, 0, 0, 0, 0,
-      0, 0.001, 0, 0, 0,
-      0, 0, 0.002, 0, 0,
+      0.0001, 0, 0, 0, 0,
+      0, 0.0001, 0, 0, 0,
+      0, 0, 0.001, 0, 0,
       0, 0, 0, 0.01, 0,
       0, 0, 0, 0, 0.01,
     ]);
