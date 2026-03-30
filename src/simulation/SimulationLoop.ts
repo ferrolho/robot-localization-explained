@@ -133,7 +133,7 @@ export class SimulationLoop {
         covariance: this.kf.getPositionCovariance(),
         traceP: this.kf.getTraceP(),
         activeSteps: {
-          predicted: this.sensors.encoders,
+          predicted: true,
           corrected: this.sensors.imu || this.sensors.lidar,
         },
         lidarBeams: this.sensors.lidar ? this.lidar.lastBeams : [],
