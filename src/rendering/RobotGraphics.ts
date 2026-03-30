@@ -1,5 +1,6 @@
 import { Graphics, Container } from 'pixi.js';
 import type { RobotState } from '../simulation/types';
+import { smoothCircle } from './shapes';
 
 const ROBOT_RADIUS = 0.15; // metres
 
@@ -13,7 +14,7 @@ export class RobotGraphics {
 
     // Body circle
     this.body = new Graphics();
-    this.body.circle(0, 0, ROBOT_RADIUS);
+    smoothCircle(this.body, 0, 0, ROBOT_RADIUS);
     this.body.fill({ color, alpha });
     this.body.stroke({ color: 0xffffff, width: 0.01, alpha: 0.5 });
     this.container.addChild(this.body);

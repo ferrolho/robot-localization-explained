@@ -1,4 +1,5 @@
 import { Graphics, Container } from 'pixi.js';
+import { smoothEllipse } from './shapes';
 
 /**
  * Draws a 2-sigma uncertainty ellipse from the 2×2 position covariance.
@@ -50,7 +51,7 @@ export class EllipseGraphics {
     this.container.y = py;
     this.container.rotation = angle;
 
-    this.gfx.ellipse(0, 0, aClamp, bClamp);
+    smoothEllipse(this.gfx, 0, 0, aClamp, bClamp);
     this.gfx.fill({ color: 0x63b3ed, alpha: 0.15 });
     this.gfx.stroke({ color: 0x63b3ed, width: 0.02, alpha: 0.5 });
   }
