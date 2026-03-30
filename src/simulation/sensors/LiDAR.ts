@@ -36,10 +36,10 @@ export class LiDAR {
     this.R = mat(2, 2, [0, 0, 0, 0]);
     this.updateDerivedParams();
 
-    // Observation matrix: picks out px and py from state
-    this.H = mat(2, 5, [
-      1, 0, 0, 0, 0,
-      0, 1, 0, 0, 0,
+    // Observation matrix: picks out px and py from 7-state
+    this.H = mat(2, 7, [
+      1, 0, 0, 0, 0, 0, 0,
+      0, 1, 0, 0, 0, 0, 0,
     ]);
   }
 
