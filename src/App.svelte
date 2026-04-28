@@ -30,7 +30,13 @@
   let activeSteps = $state({ predicted: true, corrected: false });
   let estimate = $state({ px: 0, py: 0, theta: 0, v: 0, omega: 0, bGyro: 0, bAccel: 0 });
   let sensorsEnabled = $state({ encoders: true, imu: false, lidar: false });
+  let showUncertainty = $state(true);
   let activeStage = $state(1);
+
+  $effect(() => {
+    const visible = showUncertainty;
+    if (ellipse) ellipse.container.visible = visible;
+  });
   let currentStage = $derived(STAGES[activeStage - 1]);
 
   const lidarPresets = [
@@ -272,10 +278,14 @@
         KF estimate
       </div>
       <div class="legend-item">
-        <div class="legend-dot" style="background: transparent; border: 2px solid var(--blue)"></div>
+        <div class="legend-dot" style="background: transparent; border: 2px dashed var(--yellow)"></div>
         Uncertainty (2&sigma;)
       </div>
     </div>
+    <label class="toggle legend-toggle">
+      <input type="checkbox" bind:checked={showUncertainty} />
+      Show uncertainty
+    </label>
   </div>
 
   <div>
@@ -342,6 +352,12 @@
 
   .toggle.sub {
     font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .legend-toggle {
+    margin-top: 8px;
+    font-size: 12px;
     color: var(--text-muted);
   }
 
