@@ -184,6 +184,8 @@
   .formula-math {
     font-size: 14px;
     overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 0;
   }
 
   .formula-math :global(.katex) {
