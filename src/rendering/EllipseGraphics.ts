@@ -1,5 +1,5 @@
 import { Graphics, Container } from 'pixi.js';
-import { smoothEllipse } from './shapes';
+import { dashedEllipse, smoothEllipse } from './shapes';
 
 /**
  * Draws a 2-sigma uncertainty ellipse from the 2×2 position covariance.
@@ -51,8 +51,13 @@ export class EllipseGraphics {
     this.container.y = py;
     this.container.rotation = angle;
 
+    const color = 0xfacc15;
     smoothEllipse(this.gfx, 0, 0, aClamp, bClamp);
-    this.gfx.fill({ color: 0x63b3ed, alpha: 0.15 });
-    this.gfx.stroke({ color: 0x63b3ed, width: 0.02, alpha: 0.5 });
+    this.gfx.fill({ color, alpha: 0.1 });
+    // Anchor dashes to world frame: cancel the container rotation in the dash phase
+    // so dashes don't slide along the perimeter when the eigenvector angle jumps
+    // (it can flip by ±π/2 or ±π for near-circular covariances).
+    dashedEllipse(this.gfx, 0, 0, aClamp, bClamp, 2, 2, 80, -angle);
+    this.gfx.stroke({ color, width: 0.02, alpha: 0.9 });
   }
 }
