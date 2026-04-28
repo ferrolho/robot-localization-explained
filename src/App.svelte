@@ -66,15 +66,16 @@
     renderer.worldContainer.addChild(truthTrail.container);
     renderer.worldContainer.addChild(estTrail.container);
 
-    // Uncertainty ellipse
-    ellipse = new EllipseGraphics();
-    renderer.worldContainer.addChild(ellipse.container);
-
     // Robots
     truthRobot = new RobotGraphics(0x48bb78, 0.8);
     estRobot = new RobotGraphics(0x63b3ed, 0.8);
     renderer.worldContainer.addChild(truthRobot.container);
     renderer.worldContainer.addChild(estRobot.container);
+
+    // Uncertainty ellipse — drawn last so it stays visible even when LiDAR
+    // shrinks it below the robot's footprint.
+    ellipse = new EllipseGraphics();
+    renderer.worldContainer.addChild(ellipse.container);
 
     // Click to set waypoint (only inside the room)
     renderer.app.canvas.addEventListener('click', (e: MouseEvent) => {
