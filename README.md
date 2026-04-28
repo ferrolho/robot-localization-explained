@@ -1,47 +1,51 @@
-# Svelte + TS + Vite
+# Kalman Filter Educational Visualization
 
-This template should help get you started developing with Svelte and TypeScript in Vite.
+An interactive web-based tool for learning how Kalman filters work, using a robot vacuum as an intuitive example. Toggle sensors on and off and watch how the filter's estimate and uncertainty change in real time.
 
-## Recommended IDE Setup
+The robot navigates a rectangular room driven by a closed-loop planner that uses the filter's own estimate — so a poorly-tuned filter visibly degrades navigation, just as it would on real hardware.
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+## What's modelled
 
-## Need an official Svelte framework?
+- **Ground truth** — unicycle kinematics for a differential-drive robot
+- **Wheel encoders** — noisy v, ω with diameter mismatch and slip (KF prediction input)
+- **IMU (MPU-6050)** — raw gyro and accelerometer with drifting biases (KF correction)
+- **LiDAR** — selectable presets (RPLiDAR A1/A2, Hokuyo URG-04LX, SICK TIM561) with realistic beam counts, range noise, and update rates (KF correction)
+- **7-state EKF** — `[px, py, θ, v, ω, b_a, b_g]` with online bias estimation
 
-Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploy anywhere with its serverless-first approach and adapt to various platforms, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
+The control loop runs at 200 Hz, decoupled from the ~60 Hz display, and each sensor fires at its own rate.
 
-## Technical considerations
+## Tech stack
 
-**Why use this over SvelteKit?**
+| Layer | Choice |
+|-------|--------|
+| Build | Vite 6 |
+| Language | TypeScript 5 |
+| Rendering | PixiJS 8 |
+| UI | Svelte 5 |
+| Math display | KaTeX |
 
-- It brings its own routing solution which might not be preferable for some users.
-- It is first and foremost a framework that just happens to use Vite under the hood, not a Vite app.
+## Running locally
 
-This template contains as little as possible to get started with Vite + TypeScript + Svelte, while taking into account the developer experience with regards to HMR and intellisense. It demonstrates capabilities on par with the other `create-vite` templates and is a good starting point for beginners dipping their toes into a Vite + Svelte project.
-
-Should you later need the extended capabilities and extensibility provided by SvelteKit, the template has been structured similarly to SvelteKit so that it is easy to migrate.
-
-**Why `global.d.ts` instead of `compilerOptions.types` inside `jsconfig.json` or `tsconfig.json`?**
-
-Setting `compilerOptions.types` shuts out all other types not explicitly listed in the configuration. Using triple-slash references keeps the default TypeScript setting of accepting type information from the entire workspace, while also adding `svelte` and `vite/client` type information.
-
-**Why include `.vscode/extensions.json`?**
-
-Other templates indirectly recommend extensions via the README, but this file allows VS Code to prompt the user to install the recommended extension upon opening the project.
-
-**Why enable `allowJs` in the TS template?**
-
-While `allowJs: false` would indeed prevent the use of `.js` files in the project, it does not prevent the use of JavaScript syntax in `.svelte` files. In addition, it would force `checkJs: false`, bringing the worst of both worlds: not being able to guarantee the entire codebase is TypeScript, and also having worse typechecking for the existing JavaScript. In addition, there are valid use cases in which a mixed codebase may be relevant.
-
-**Why is HMR not preserving my local component state?**
-
-HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/rixo/svelte-hmr#svelte-hmr).
-
-If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
-
-```ts
-// store.ts
-// An extremely simple external store
-import { writable } from 'svelte/store'
-export default writable(0)
+```bash
+npm install
+npm run dev
 ```
+
+Other scripts:
+
+- `npm run build` — production build to `dist/`
+- `npm run preview` — preview the production build
+- `npm run check` — `svelte-check` + `tsc` type check
+
+There is also a headless diagnostic script for KF tuning: see [scripts/](scripts/).
+
+## Project layout
+
+See [PLAN.md](PLAN.md) for the full architecture, state vector definition, sensor roles, and the H/R matrices used by the filter. Implementation progress is tracked in [PROGRESS.md](PROGRESS.md).
+
+Key directories:
+
+- [src/simulation/](src/simulation/) — robot kinematics, room geometry, sensors, Kalman filter
+- [src/rendering/](src/rendering/) — PixiJS graphics (robot, trails, uncertainty ellipse, LiDAR points)
+- [src/components/](src/components/) — Svelte UI (sensor toggles, formula panel)
+- [src/lib/matrix.ts](src/lib/matrix.ts) — hand-rolled matrix ops, kept explicit for educational clarity
