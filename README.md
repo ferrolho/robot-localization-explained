@@ -1,6 +1,13 @@
-# Kalman Filter Educational Visualization
+# Robot Localization, Step by Step
 
-An interactive web-based tool for learning how Kalman filters work, using a robot vacuum as an intuitive example. Toggle sensors on and off and watch how the filter's estimate and uncertainty change in real time.
+**[Live demo →](https://ferrolho.github.io/robot-localization-step-by-step/)**
+
+An interactive, step-by-step introduction to how a robot works out where it is, using a robot vacuum as the example. Each stage adds one idea on top of the last, and you toggle sensors on and off to see why it matters:
+
+1. **Dead reckoning** — wheel encoders alone. Errors accumulate without correction.
+2. **Kalman filter** — add an IMU. The filter fuses the encoder prediction with IMU measurements to correct drift.
+3. **Localization** — add LiDAR and a known map for absolute position. Uncertainty drops dramatically.
+4. **SLAM** — build the map while navigating *(coming soon)*.
 
 The robot navigates a rectangular room driven by a closed-loop planner that uses the filter's own estimate — so a poorly-tuned filter visibly degrades navigation, just as it would on real hardware.
 

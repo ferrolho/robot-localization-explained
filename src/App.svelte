@@ -187,7 +187,7 @@
 </script>
 
 <div class="side-panel">
-  <h1>Kalman Filter: Robot Vacuum</h1>
+  <h1>Robot Localization, Step by Step</h1>
 
   <JourneyStepper {activeStage} onStageChange={setStage} />
 
