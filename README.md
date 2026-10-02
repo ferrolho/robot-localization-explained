@@ -1,6 +1,6 @@
-# Robot Localization, Step by Step
+# Robot Localization, Explained
 
-**[Live demo →](https://ferrolho.github.io/robot-localization-step-by-step/)**
+**[Live demo →](https://ferrolho.github.io/robot-localization-explained/)**
 
 An interactive, step-by-step introduction to how a robot works out where it is, using a robot vacuum as the example. Each stage adds one idea on top of the last, and you toggle sensors on and off to see why it matters:
 

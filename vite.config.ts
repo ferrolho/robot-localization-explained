@@ -3,6 +3,6 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 
 export default defineConfig({
   plugins: [svelte()],
-  base: '/robot-localization-step-by-step/',
+  base: '/robot-localization-explained/',
   build: { outDir: 'dist' },
 })

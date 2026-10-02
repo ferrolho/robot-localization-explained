@@ -187,7 +187,7 @@
 </script>
 
 <div class="side-panel">
-  <h1>Robot Localization, Step by Step</h1>
+  <h1>Robot Localization, Explained</h1>
 
   <JourneyStepper {activeStage} onStageChange={setStage} />
 
